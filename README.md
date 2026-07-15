@@ -88,7 +88,7 @@ Original sources: CB1 is the fine-grained corpus of [Wang, Fu and Lu (IEEE Big D
 ## Related work by the authors
 
 - Saeid, Kanojia, Neri. *Decoding Cyberbullying on Social Media: A Machine Learning Exploration.* IEEE CAI 2024. [DOI](https://doi.org/10.1109/CAI59869.2024.00084)
-- Saeid, Sabu, Koushik, Neri, Kanojia. *Cyberbullying Detection via Aggression-Enhanced Prompting.* RANLP 2025. [arXiv](https://arxiv.org/abs/2508.06360)
+- Saeid, Sabu, Koushik, Neri, Kanojia. *Cyberbullying Detection via Aggression-Enhanced Prompting.* RANLP 2025. https://aclanthology.org/2025.ranlp-1.120/
 
 ## Citation
 
