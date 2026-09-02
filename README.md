@@ -39,14 +39,26 @@ Every notebook uses the same protocol, so results are directly comparable.
 ## Repository layout
 
 ```
-notebooks/       one notebook per experiment, outputs retained
-results/         per-run CSV files written by the notebooks
-figures/         framework diagram and plots
-requirements.txt pinned environment
-LICENSE          MIT
+notebooks/
+  01_ .. 07_*.ipynb          Gemma-2-9B on CB1, and the additional baselines
+  stage1_baselines/          prompting baselines, all six models, both datasets
+  stage2_additive_lora/      additive LoRA, all six models, both datasets
+  stage3_multiplicative_lora/ multiplicative LoRA, all six models, both datasets
+  stage4_generalized_lora/   joint formulation, all six models, both datasets
+  multi_seed_validation/     earlier multi-seed run, superseded (see below)
+results/                     per-run CSV files written by the notebooks
+figures/                     framework diagram and plots
+requirements.txt             pinned environment
+LICENSE                      MIT
 ```
 
-## Notebooks
+Two groups of notebooks sit side by side, and both are needed to reproduce the paper.
+
+## Notebooks: Gemma-2-9B on CB1, and the additional baselines
+
+Gemma-2-9B is the model on which the headline claims rest, so its CB1 experiments select the
+adapter rank on the validation partition. These notebooks produce the Gemma-2-9B rows throughout,
+and all of Tables 6 and 7.
 
 | Notebook | Experiment | Reported in |
 |---|---|---|
@@ -64,6 +76,26 @@ LICENSE          MIT
 `05_peft_baseline_dora` also contains an earlier AdaLoRA run in which the rank allocator was never
 invoked, so it trained at a fixed rank of 48 with no budget reallocation. That run is not a valid
 AdaLoRA result and is superseded by `05b_peft_baseline_adalora`, which is the one reported.
+
+## Notebooks: the full model sweep
+
+These cover all six models on both datasets. For the five models other than Gemma-2-9B, the rank
+reported in the paper is the one attaining the best test score, which is stated as a limitation in
+Sec. 4.1; the optimism applies to the additive and multiplicative baselines as much as to the joint
+formulation.
+
+| Folder | Covers | Reported in |
+|---|---|---|
+| `stage1_baselines/` | Zero-shot and few-shot prompting, encoders and decoders | Sec. 4.2, column S1 of Table 3 |
+| `stage2_additive_lora/` | W + AB, six models, CB1 and CB2 | Sec. 4.3, columns S2 of Table 3, Table 9 |
+| `stage3_multiplicative_lora/` | W(I + UV), six models, CB1 and CB2 | Sec. 4.4, columns S3 of Table 3, Table 9 |
+| `stage4_generalized_lora/` | W(I + UV) + AB, six models, CB1 and CB2 | Sec. 4.5, columns S4 of Table 3, Tables 4 and 9 |
+
+Every CB2 result in the paper comes from this group; the CB2 experiments were not repeated.
+
+`multi_seed_validation/` contains an earlier multi-seed run covering the joint formulation only, at
+the rank selected before validation-based selection was adopted. Its numbers do not appear in the
+paper and are superseded by `04a`, `04b` and `04c`. It is retained for completeness.
 
 ## Main results
 
