@@ -1,0 +1,5 @@
+rank,max_uv_spectral_norm,pct_layers_norm_below_1,min_sigma_min,max_condition_number,effective_rank
+4,2.22,31.0,0.368,7.01,2815.98
+8,3.36,3.6,0.296,12.30,2815.98
+16,6.00,1.2,0.169,32.51,2815.98
+32,10.64,0.0,0.092,94.22,2815.55

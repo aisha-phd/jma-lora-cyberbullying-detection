@@ -1,0 +1,4 @@
+comparison,metric,mean_diff,sd,t_df2,p_value,wins
+joint_minus_additive,macro_f1,0.0027,0.0021,2.23,0.155,3/3
+joint_minus_multiplicative,macro_f1,0.0091,0.0022,7.25,0.019,3/3
+additive_minus_multiplicative,macro_f1,0.0064,0.0001,96.50,0.0001,3/3

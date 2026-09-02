@@ -1,0 +1,8 @@
+method,backbone,trainable_params,epochs,seeds,macro_f1,mcc
+deberta_v3_large_zero_shot,DeBERTa-v3-large,0,,1,0.3129,
+deberta_v3_large_full_finetune,DeBERTa-v3-large,435067910,3,1,0.9001,0.8932
+adalora_48_to_32,Gemma-2-9B,53703552,1,1,0.8772,0.8686
+multiplicative_r32,Gemma-2-9B,39911424,1,3,0.8943,0.8878
+dora_r32,Gemma-2-9B,36298752,1,1,0.9014,0.8942
+additive_r32,Gemma-2-9B,35804160,1,3,0.9007,0.8938
+jma_lora_r8,Gemma-2-9B,18945024,1,3,0.9034,0.8970
