@@ -9,9 +9,13 @@ JMA-LoRA trains a multiplicative and an additive low-rank path together,
 W̃ = W(I + UV) + AB
 ```
 
-and recovers standard additive LoRA when `UV = 0` and multiplicative LoRA when `AB = 0`. The
-repository contains every experiment reported in the paper, with outputs retained so the numbers
-can be read without re-running anything.
+and recovers standard additive LoRA when `UV = 0` and multiplicative LoRA when `AB = 0`.
+
+![The four-stage research framework](figures/framework.png)
+
+The four stages share one evaluation protocol: Stage 1 establishes prompting baselines, Stages 2
+and 3 train the additive and multiplicative paths in isolation, and Stage 4 trains both jointly.
+Notebook outputs are retained, so the reported numbers can be read without re-running anything.
 
 ## Datasets
 
@@ -40,17 +44,30 @@ Every notebook uses the same protocol, so results are directly comparable.
 
 ```
 notebooks/
-  01_ .. 07_*.ipynb          Gemma-2-9B on CB1, and the additional baselines
-  stage1_baselines/          prompting baselines, all six models, both datasets
-  stage2_additive_lora/      additive LoRA, all six models, both datasets
-  stage3_multiplicative_lora/ multiplicative LoRA, all six models, both datasets
-  stage4_generalized_lora/   joint formulation, all six models, both datasets
-  multi_seed_validation/     earlier multi-seed run, superseded (see below)
-results/                     per-run CSV files written by the notebooks
-figures/                     framework diagram and plots
-requirements.txt             pinned environment
-LICENSE                      MIT
+  01_ .. 07_*.ipynb           Gemma-2-9B on CB1, and the additional baselines
+  stage1_baselines/           prompting baselines
+  stage2_additive_lora/       additive LoRA, wider model sweep
+  stage3_multiplicative_lora/ multiplicative LoRA, wider model sweep
+  stage4_generalized_lora/    joint formulation, wider model sweep
+  multi_seed_validation/      earlier multi-seed run, superseded (see below)
+results/                      result tables as CSV
+figures/                      framework diagram
+requirements.txt              pinned environment
+LICENSE                       MIT
 ```
+
+### `results/`
+
+| File | Contents |
+|---|---|
+| `cb1_cross_stage.csv` | Table 3, CB1 block |
+| `stage4_cb1_rank_sweep.csv` | Table 4, Gemma-2-9B, with validation and test scores |
+| `multi_seed_validation.csv` | Table 6, per-seed results for all three formulations |
+| `paired_tests_cb1.csv` | Table 6, lower block |
+| `peft_and_encoder_baselines_cb1.csv` | Table 7 |
+| `rank_conditioning_cb1.csv` | Table 8 |
+| `cb2_cross_stage.csv` | Table 3, CB2 block |
+| `effective_rank_cb1.csv` | Table 9 |
 
 Two groups of notebooks sit side by side, and both are needed to reproduce the paper.
 
@@ -77,21 +94,27 @@ and all of Tables 6 and 7.
 invoked, so it trained at a fixed rank of 48 with no budget reallocation. That run is not a valid
 AdaLoRA result and is superseded by `05b_peft_baseline_adalora`, which is the one reported.
 
-## Notebooks: the full model sweep
+## Notebooks: the wider model sweep
 
-These cover all six models on both datasets. For the five models other than Gemma-2-9B, the rank
-reported in the paper is the one attaining the best test score, which is stated as a limitation in
-Sec. 4.1; the optimism applies to the additive and multiplicative baselines as much as to the joint
-formulation.
+The paper reports six decoder models on two datasets. The folders below hold **representative**
+notebooks for each stage rather than one file per model: the pipeline is identical across models,
+so a run is reproduced by changing the checkpoint name in the configuration cell. Stage 4 on CB1 is
+the exception and is provided in full, since that is where the cross-model comparison is drawn.
 
-| Folder | Covers | Reported in |
+| Folder | Notebooks provided | Reported in |
 |---|---|---|
-| `stage1_baselines/` | Zero-shot and few-shot prompting, encoders and decoders | Sec. 4.2, column S1 of Table 3 |
-| `stage2_additive_lora/` | W + AB, six models, CB1 and CB2 | Sec. 4.3, columns S2 of Table 3, Table 9 |
-| `stage3_multiplicative_lora/` | W(I + UV), six models, CB1 and CB2 | Sec. 4.4, columns S3 of Table 3, Table 9 |
-| `stage4_generalized_lora/` | W(I + UV) + AB, six models, CB1 and CB2 | Sec. 4.5, columns S4 of Table 3, Tables 4 and 9 |
+| `stage1_baselines/` | Encoders (CB1, CB2) and one decoder (CB1, CB2) | Sec. 4.2, column S1 of Table 3 |
+| `stage2_additive_lora/` | Gemma-2-9B (CB1), Llama-3.2-3B (CB1, CB2) | Sec. 4.3, column S2 of Table 3, Table 9 |
+| `stage3_multiplicative_lora/` | Llama-3.2-3B (CB1, CB2) | Sec. 4.4, column S3 of Table 3, Table 9 |
+| `stage4_generalized_lora/` | All six models (CB1), Llama-3.2-3B (CB2) | Sec. 4.5, column S4 of Table 3, Tables 4 and 9 |
 
-Every CB2 result in the paper comes from this group; the CB2 experiments were not repeated.
+For the five models other than Gemma-2-9B, the rank reported in the paper is the one attaining the
+best test score. This is stated as a limitation in Sec. 4.1; the optimism applies to the additive
+and multiplicative baselines as much as to the joint formulation, so it works against the
+comparison rather than in its favour.
+
+Every CB2 result in the paper comes from this group. The CB2 experiments were not repeated, which
+is why the multi-seed study in Table 6 covers CB1 only.
 
 `multi_seed_validation/` contains an earlier multi-seed run covering the joint formulation only, at
 the rank selected before validation-based selection was adopted. Its numbers do not appear in the
