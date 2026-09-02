@@ -1,12 +1,42 @@
-# Environment used on Google Colab (torch 2.5.x era)
-torch>=2.5,<2.6
-transformers>=4.46,<4.52
-peft>=0.13
-bitsandbytes>=0.44
-accelerate>=1.0
-datasets>=3.0
-scikit-learn>=1.5
-pandas>=2.2
-numpy>=1.26
-matplotlib>=3.9
+# Two environments are represented in this repository, because the notebooks were
+# executed in two different Colab images. Each notebook pins its own versions in
+# its first cell; these files record what those pins resolve to.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Environment A. Notebooks 01 to 07, and every result reported for Gemma-2-9B on
+# CB1, the multi-seed study, the PEFT and encoder baselines, and the epoch
+# sensitivity run. Python 3.13, single A100.
+# ─────────────────────────────────────────────────────────────────────────────
+torch==2.11.0
+transformers==4.51.3
+peft==0.20.0
+bitsandbytes==0.50.1
+accelerate==1.14.0
+datasets==3.6.0
+scikit-learn
+pandas
+numpy
+matplotlib
+seaborn
 sentencepiece
+protobuf
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Environment B. The stage1 to stage4 folders, covering the wider model sweep and
+# all CB2 results. Python 3.11, Colab torch 2.5.x image.
+#
+# transformers is capped below 4.52 because the Trainer evaluation signature
+# changes there. datasets is capped below 4.0 because 4.0 imports VideoReader
+# from torchvision.io, which newer torchvision releases no longer provide.
+# ─────────────────────────────────────────────────────────────────────────────
+# torch>=2.5,<2.6
+# transformers>=4.46,<4.52
+# peft>=0.13
+# bitsandbytes>=0.44
+# accelerate>=1.0
+# datasets>=3.0,<4.0
+# scikit-learn>=1.5
+# pandas>=2.2
+# numpy>=1.26
+# matplotlib>=3.9
+# sentencepiece
