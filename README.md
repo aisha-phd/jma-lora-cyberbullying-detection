@@ -1,109 +1,133 @@
-# Generalized LoRA for Cyberbullying Detection
+# JMA-LoRA: Joint Multiplicative-Additive Low-Rank Adaptation for Cyberbullying Detection
 
-Code and full results for the paper:
+Code, notebooks and results for the paper *JMA-LoRA: Joint Multiplicative-Additive Low-Rank
+Adaptation for Cyberbullying Detection*, International Journal of Neural Systems.
 
-> **Generalized LoRA for Cyberbullying Detection: Combining Multiplicative and Additive Low-Rank Adaptation Across Six Decoder-Based Large Language Models**
-> Aisha Saeid et al., submitted to the *International Journal of Neural Systems* (2026).
-
-![Research framework](figures/framework.png)
-
-## What this research does
-
-Existing low-rank adaptation (LoRA) methods fine-tune large language models through either an additive update (`W + AB`) or a multiplicative one (`W(I + UV)`), never both. This project introduces a **generalized formulation that trains both adapter paths jointly**:
+JMA-LoRA trains a multiplicative and an additive low-rank path together,
 
 ```
-W_f = W(I + UV) + AB
+W̃ = W(I + UV) + AB
 ```
 
-Setting `UV = 0` recovers standard LoRA and setting `AB = 0` recovers multiplicative LoRA, so the formulation strictly contains both. We evaluate it on cyberbullying detection with six decoder LLMs (3B to 27B parameters, 4-bit NF4 QLoRA) and two datasets: CB1 (6-class, tweet-level) and CB2 (binary, conversation-level).
+and recovers standard additive LoRA when `UV = 0` and multiplicative LoRA when `AB = 0`. The
+repository contains every experiment reported in the paper, with outputs retained so the numbers
+can be read without re-running anything.
 
-**Headline findings:** the generalized framework achieves the best result on both datasets (Macro F1 = 0.9082 on CB1, 0.8959 on CB2, confirmed across three training seeds), reaches its best CB1 result with 3.8x fewer trainable parameters than standard LoRA (9.5M vs 35.8M), recovers a catastrophic training collapse of the purely multiplicative form (+0.1359 F1 on Mistral-7B at identical rank), and preserves the effective rank of the adapted weights exactly as the theory predicts.
+## Datasets
 
-## The four stages
+| | Task | Unit | Samples | Test set |
+|---|---|---|---|---|
+| CB1 | 6-class | Tweet | 47,692 | 10,330 |
+| CB2 | Binary | Conversation | 89,525 | 20,346 |
 
-| Stage | Formula | What it tests | Notebooks |
-|-------|---------|---------------|-----------|
-| **1. Baselines** | `W` (frozen) | Zero-shot and few-shot prompting, for NLI encoders (DeBERTa, RoBERTa) and all six decoders | `notebooks/stage1_baselines/` |
-| **2. Additive LoRA** | `W + AB` | The standard LoRA path in isolation, rank sweep r ∈ {4, 8, 16, 32} on CB1 | `notebooks/stage2_additive_lora/` |
-| **3. Multiplicative LoRA** | `W(I + UV)` | The multiplicative path in isolation, near-identity initialization | `notebooks/stage3_multiplicative_lora/` |
-| **4. Generalized LoRA** | `W(I + UV) + AB` | Both paths trained jointly (proposed) | `notebooks/stage4_generalized_lora/` |
+CB1 is the SOSNet corpus (Wang et al., 2020); CB2 derives from Ejaz et al. (2024). Processed
+datasets: https://github.com/aisha-phd/Cyberbullying-Detection
 
-Every stage shares one evaluation protocol, so cross-stage differences isolate the adaptation formula.
+## Protocol
 
-### Multi-seed validation
+Every notebook uses the same protocol, so results are directly comparable.
 
-A result that exists at only one random seed is not a result. The champion configuration (Gemma-2-9B under generalized LoRA) was therefore retrained with three training seeds (42, 123, 456) on both datasets, keeping the data split fixed so every run faces the identical test set; only weight initialization, dropout masks, and shuffling order change. All three seeds beat the best standard-LoRA and multiplicative-LoRA results on both datasets, and the CB1 mean minus two standard deviations (0.9022) stays above the standard-LoRA best (0.9010), so the improvement holds at roughly 95% confidence. Notebooks: `notebooks/multi_seed_validation/`, data: `results/multi_seed_validation.csv`.
-
-## Models
-
-| Model | Params | HuggingFace checkpoint |
-|-------|--------|------------------------|
-| Llama-3.2-3B | 3B | `meta-llama/Llama-3.2-3B-Instruct` |
-| Mistral-7B | 7B | `mistralai/Mistral-7B-Instruct-v0.3` |
-| Gemma-2-9B | 9B | `google/gemma-2-9b-it` |
-| Qwen3-14B | 14B | `Qwen/Qwen3-14B` |
-| Phi-4 | 15B | `microsoft/phi-4` |
-| Gemma-3-27B | 27B | `google/gemma-3-27b-it` (CausalLM wrapper, see paper Sec. 3.2.3) |
-
-## Reproducibility protocol
-
-All experiments, all stages, all models:
-
-- **Data split:** 75/25 stratified, seed 42, fixed across every run; 10% of the training pool held out for validation (effective 67.5 / 7.5 / 25). Test set touched exactly once per experiment.
-- **Near-duplicate removal:** TF-IDF cosine similarity, 0.90 threshold, before splitting.
-- **Quantization:** 4-bit NF4 with double quantization (QLoRA), base weights frozen.
-- **Adapters:** on query, key, value, and output projections; `lora_alpha = lora_rank` (scaling 1.0); dropout 0.05.
-- **Training:** one epoch, learning rate 2e-4, fixed across all models and stages. Batch sizes per model as listed in the paper (Table 2). Two exceptions carried unchanged across stages: Mistral-7B uses 100 warmup steps with cosine decay in all runs; Qwen3-14B uses the same on CB2.
-- **Class weights:** applied on both datasets; essential on CB2 (imbalance 1.93:1, weights 0.3484 / 0.6516).
-- **Metrics:** Macro F1 (primary), MCC (secondary), AUC-ROC on CB2. Effective rank of the adapted weights measured after every fine-tuning run via SVD (singular values above 1e-3 of the largest, averaged over adapted layers).
-- **Hardware:** Google Colab, A100 40GB recommended (Gemma-3-27B requires gradient checkpointing and ~25h per CB2 run).
+- 75/25 stratified split at seed 42, with a further 10% of train held out for validation
+- Near-duplicate removal at TF-IDF cosine similarity 0.90
+- Four-bit NF4 quantization with double quantization; base weights frozen
+- Adapters on the query, key, value and output projections, with α = r
+- One epoch, class-weighted cross-entropy
+- Macro F1 primary, MCC secondary, AUC-ROC additionally on CB2
+- **Adapter ranks and checkpoints are selected on the validation partition. The test set is
+  evaluated once, for the selected configuration only.**
 
 ## Repository layout
 
 ```
-notebooks/
-  stage1_baselines/            encoder (NLI) and decoder prompting baselines, CB1 and CB2
-  stage2_additive_lora/        W + AB
-  stage3_multiplicative_lora/  W(I + UV)
-  stage4_generalized_lora/     W(I + UV) + AB  (all six models on CB1, plus CB2)
-  multi_seed_validation/       champion retrained at seeds 42 / 123 / 456
-results/      full per-rank result grids, cross-stage tables, multi-seed and effective-rank data
-figures/      the research framework diagram
+notebooks/       one notebook per experiment, outputs retained
+results/         per-run CSV files written by the notebooks
+figures/         framework diagram and plots
+requirements.txt pinned environment
+LICENSE          MIT
 ```
 
-Between models only the model name and batch size change; the training protocol is identical.
+## Notebooks
 
-## Running the notebooks
+| Notebook | Experiment | Reported in |
+|---|---|---|
+| `01_stage2_additive_rank_sweep` | Additive LoRA, r ∈ {4, 8, 16, 32} | Sec. 4.3, Table 3 |
+| `02_stage3_multiplicative_rank_sweep` | Multiplicative LoRA, same sweep, plus rank-preservation diagnostics | Sec. 4.4, 4.9, Tables 3 and 8 |
+| `03_stage4_jma_lora_rank_sweep` | JMA-LoRA, same sweep and diagnostics | Sec. 4.5, 4.9, Tables 3, 4 and 8 |
+| `04a_stage2_multiseed` | Additive at r = 32, seeds 42/123/456 | Sec. 4.7, Table 6 |
+| `04b_stage3_multiseed` | Multiplicative at r = 32, same seeds | Sec. 4.7, Table 6 |
+| `04c_stage4_multiseed` | JMA-LoRA at r = 8, same seeds | Sec. 4.7, Table 6 |
+| `05_peft_baseline_dora` | DoRA at r = 32 | Sec. 4.8, Table 7 |
+| `05b_peft_baseline_adalora` | AdaLoRA, init_r 48 pruned to 32 | Sec. 4.8, Table 7 |
+| `06_encoder_baseline_deberta` | DeBERTa-v3-large, full fine-tuning | Sec. 4.8, Table 7 |
+| `07_epoch_sensitivity` | JMA-LoRA at r = 8 for three epochs | Sec. 3.2.4, 5.3 |
 
-1. Open a notebook in Google Colab (GPU runtime, A100 recommended for 9B+).
-2. Add your HuggingFace token to Colab Secrets as `HF_TOKEN` (gated models: Llama, Gemma).
-3. Point the data-loading cell at the datasets (below) and run top to bottom.
+`05_peft_baseline_dora` also contains an earlier AdaLoRA run in which the rank allocator was never
+invoked, so it trained at a fixed rank of 48 with no budget reallocation. That run is not a valid
+AdaLoRA result and is superseded by `05b_peft_baseline_adalora`, which is the one reported.
 
-## Datasets
+## Main results
 
-The processed datasets are in a separate repository: [aisha-phd/Cyberbullying-Detection](https://github.com/aisha-phd/Cyberbullying-Detection).
+CB1, Gemma-2-9B-it, test Macro F1.
 
-Original sources: CB1 is the fine-grained corpus of [Wang, Fu and Lu (IEEE Big Data 2020)](https://doi.org/10.1109/BigData50022.2020.9378065); CB2 builds on the conversation-level corpus of [Ejaz, Razi and Choudhury (Comput. Human Behav. 2024)](https://doi.org/10.1016/j.chb.2023.108123). Please cite the original dataset papers if you use the data.
+| Method | Trainable | Macro F1 | MCC | Seeds |
+|---|---|---|---|---|
+| DeBERTa-v3-large, zero-shot | 0 | 0.3129 | — | 1 |
+| DeBERTa-v3-large, full fine-tuning | 435,067,910 | 0.9001 | 0.8932 | 1 |
+| AdaLoRA, 48 → 32 | 53,703,552 | 0.8772 | 0.8686 | 1 |
+| Multiplicative LoRA, r = 32 | 39,911,424 | 0.8943 | 0.8878 | 3 |
+| DoRA, r = 32 | 36,298,752 | 0.9014 | 0.8942 | 1 |
+| Additive LoRA, r = 32 | 35,804,160 | 0.9007 | 0.8938 | 3 |
+| **JMA-LoRA, r = 8** | **18,945,024** | **0.9034** | **0.8970** | 3 |
 
-## Related work by the authors
+Rows with three seeds report the mean over training seeds 42, 123 and 456. Single-seed rows are one
+run at seed 42. Changing the training seed moves Macro F1 by 0.0015 to 0.0025, so differences below
+roughly 0.002 should not be read as meaningful. The encoder was trained for three epochs with the
+best epoch selected on validation, a more generous budget than the single epoch used for every
+adapted model.
 
-- Saeid, Kanojia, Neri. *Decoding Cyberbullying on Social Media: A Machine Learning Exploration.* IEEE CAI 2024. [DOI](https://doi.org/10.1109/CAI59869.2024.00084)
-- Saeid, Sabu, Koushik, Neri, Kanojia. *Cyberbullying Detection via Aggression-Enhanced Prompting.* RANLP 2025. https://aclanthology.org/2025.ranlp-1.120/
+At matched trainable-parameter budgets on CB1, JMA-LoRA leads additive LoRA by +0.0082 at
+approximately 9M parameters and +0.0043 at approximately 18M, and trails by 0.0051 at approximately
+36M, where the additive path alone has sufficient capacity.
+
+## Rank preservation
+
+Proposition 2 gives ‖UV‖₂ < 1 as a *sufficient* condition for I + UV to be invertible, and hence
+for rank to be preserved. Measured across the 168 adapted projections after training:
+
+| r | max ‖UV‖₂ | layers with ‖UV‖₂ < 1 | min σ(I+UV) | max κ | effective rank |
+|---|---|---|---|---|---|
+| 4 | 2.22 | 31.0% | 0.368 | 7.01 | 2815.98 |
+| 8 | 3.36 | 3.6% | 0.296 | 12.30 | 2815.98 |
+| 16 | 6.00 | 1.2% | 0.169 | 32.51 | 2815.98 |
+| 32 | 10.64 | 0.0% | 0.092 | 94.22 | 2815.55 |
+
+The condition fails in most layers, yet effective rank is unchanged, because I + UV remains
+invertible. Rank preservation rests on invertibility rather than on the Neumann bound.
+
+## Environment
+
+PyTorch 2.11, Transformers 4.51.3, PEFT 0.20, bitsandbytes 0.50.1, datasets 3.6, Python 3.13, on a
+single A100. Each notebook pins its own environment in the first cell; run that cell, restart the
+runtime, then run the remaining cells in order.
+
+Approximate GPU time per notebook: 3 to 4 hours for a rank sweep, 7 hours for a multi-seed run,
+3 hours for a PEFT baseline, 1 hour for the encoder, 7 hours for the epoch-sensitivity run.
 
 ## Citation
 
-The paper is under review. Until publication, please cite:
-
 ```bibtex
-@unpublished{saeid2026generalized,
-  author = {Saeid, Aisha and others},
-  title  = {Generalized LoRA for Cyberbullying Detection: Combining Multiplicative
-            and Additive Low-Rank Adaptation Across Six Decoder-Based Large Language Models},
-  note   = {Submitted to the International Journal of Neural Systems},
-  year   = {2026}
+@article{saeid2026jmalora,
+  author  = {Saeid, Aisha and Neri, Ferrante and Kanojia, Diptesh},
+  title   = {{JMA-LoRA}: Joint Multiplicative-Additive Low-Rank Adaptation
+             for Cyberbullying Detection},
+  journal = {International Journal of Neural Systems},
+  year    = {2026}
 }
 ```
 
-## License
+## Related work by the authors
 
-Code released under the [MIT License](LICENSE). Datasets keep the licenses of their original sources.
+- A. Saeid, D. Kanojia and F. Neri, *Decoding cyberbullying on social media: a machine learning
+  exploration*, IEEE Conference on Artificial Intelligence, 2024.
+- A. Saeid, A. Sabu, G. A. Koushik, F. Neri and D. Kanojia, *Cyberbullying detection via
+  aggression-enhanced prompting*, RANLP 2025.
